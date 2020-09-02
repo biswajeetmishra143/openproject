@@ -553,7 +553,7 @@ describe Projects::CopyService, 'integration', type: :model do
         end
       end
 
-      describe 'user custom field' do
+      describe 'work package user custom field' do
         let(:custom_field) do
           FactoryBot.create(:user_wp_custom_field).tap do |cf|
             source.work_package_custom_fields << cf
@@ -587,6 +587,49 @@ describe Projects::CopyService, 'integration', type: :model do
             wp = project_copy.work_packages.find_by(subject: work_package.subject)
             expect(wp.send(:"custom_field_#{custom_field.id}"))
               .to be_nil
+          end
+        end
+      end
+    end
+
+    describe 'project custom fields' do
+      context 'with user project CF' do
+        let(:user_custom_field) { FactoryBot.create(:user_project_custom_field) }
+        let(:user_value) do
+          FactoryBot.create(:user,
+                            member_in_project: source,
+                            member_through_role: role)
+        end
+
+        before do
+          source.custom_values << CustomValue.new(custom_field: user_custom_field, value: user_value.id.to_s)
+        end
+
+        context 'with the value being a member' do
+          let(:only_args) { %w[members] }
+
+          it 'copies the custom_field' do
+            expect(subject).to be_success
+
+            cv = project_copy.custom_values.reload.find_by(custom_field: user_custom_field)
+            expect(cv).to be_present
+            expect(cv.value).to eq user_value.id.to_s
+            expect(cv.typed_value).to eq user_value
+          end
+        end
+
+        context 'with the value not being a member' do
+          let(:only_args) { ['wiki'] }
+
+          it 'nils the custom_field' do
+            expect(subject).to be_success
+
+            # but contains error for CF
+            expect(subject.errors.full_messages).to eq ["Custom fields on project could not be (fully) copied."]
+
+            cv = project_copy.custom_values.reload.find_by(custom_field: user_custom_field)
+            expect(cv.value).to eq nil
+            expect(cv.typed_value).to eq nil
           end
         end
       end

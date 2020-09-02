@@ -44,7 +44,7 @@ module Projects
     # Whether to skip the given key.
     # Useful when copying nested dependencies
     def skip_dependency?(params, dependency_cls)
-      !Copy::Dependency.should_copy?(params, dependency_cls.identifier.to_sym)
+      !dependency_cls.should_copy?(params, dependency_cls.identifier.to_sym)
     end
 
     def copy_dependencies
@@ -57,7 +57,8 @@ module Projects
         ::Projects::Copy::ForumsDependentService,
         ::Projects::Copy::QueriesDependentService,
         ::Projects::Copy::BoardsDependentService,
-        ::Projects::Copy::OverviewDependentService
+        ::Projects::Copy::OverviewDependentService,
+        ::Projects::Copy::CustomFieldsDependentService
       ]
     end
 
@@ -72,10 +73,6 @@ module Projects
 
       # Copy status object
       target.status = source.status&.dup
-
-      # Copy enabled custom fields and their values
-      target.custom_field_values = source.custom_value_attributes
-      target.custom_values = source.custom_values.map(&:dup)
 
       target.status = source.status.dup
 
